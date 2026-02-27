@@ -1,0 +1,6 @@
+FROM golang:1.21-alpine
+WORKDIR /app
+COPY . .
+RUN go mod init app && go get github.com/gin-gonic/gin gorm.io/driver/postgres gorm.io/gorm github.com/streadway/amqp
+RUN go build -o main .
+CMD ["./main"]
