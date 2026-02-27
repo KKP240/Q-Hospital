@@ -1,6 +1,6 @@
 # 🏥 Hospital Queue Microservices
 
-ระบบจัดการคิวโรงพยาบาลแบบ **Microservices Architecture**\
+ระบบจัดการคิวโรงพยาบาลแบบ **Microservices Architecture**
 สำหรับรายวิชา **Microservice Design and Development**
 
 ------------------------------------------------------------------------
