@@ -47,8 +47,8 @@
 ### ขั้นตอนที่ 1: Clone Repository
 
 ``` bash
-git clone https://github.com/your-username/hospital-queue-microservices.git
-cd hospital-queue-microservices
+git clone https://github.com/KKP240/Q-Hospital.git
+cd Q-Hospital
 ```
 
 ### ขั้นตอนที่ 2: รัน Services
