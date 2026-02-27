@@ -29,7 +29,7 @@ type Prescription struct {
 var db *gorm.DB
 
 func main() {
-	var err error
+	// var err error
 	db, _ = gorm.Open(postgres.Open(os.Getenv("DB_URL")), &gorm.Config{})
 	db.AutoMigrate(&Payment{}, &Prescription{})
 

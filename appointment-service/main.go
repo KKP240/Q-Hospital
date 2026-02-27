@@ -24,7 +24,7 @@ var db *gorm.DB
 var rabbitCh *amqp.Channel
 
 func main() {
-	var err error
+	// var err error
 	db, _ = gorm.Open(postgres.Open(os.Getenv("DB_URL")), &gorm.Config{})
 	db.AutoMigrate(&Appointment{})
 

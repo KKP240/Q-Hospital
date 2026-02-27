@@ -29,7 +29,7 @@ var rabbitCh *amqp.Channel
 var counter = 0
 
 func main() {
-	var err error
+	// var err error
 	db, _ = gorm.Open(postgres.Open(os.Getenv("DB_URL")), &gorm.Config{})
 	db.AutoMigrate(&Queue{})
 
@@ -46,7 +46,7 @@ func main() {
 		for msg := range msgs {
 			var event map[string]interface{}
 			json.Unmarshal(msg.Body, &event)
-			
+
 			counter++
 			queue := Queue{
 				AppointmentID: uint(event["appointment_id"].(float64)),
@@ -61,8 +61,8 @@ func main() {
 
 	r := gin.Default()
 	r.GET("/queues", list)
-	r.PUT("/queues/:id/call", call)   // เรียกเข้าห้องตรวจ
-	r.PUT("/queues/:id/done", done)   // ตรวจเสร็จ → ส่งไป payment-pill
+	r.PUT("/queues/:id/call", call) // เรียกเข้าห้องตรวจ
+	r.PUT("/queues/:id/done", done) // ตรวจเสร็จ → ส่งไป payment-pill
 
 	log.Println("Queue-Patient Service :8080")
 	r.Run(":8080")
