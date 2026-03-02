@@ -50,8 +50,21 @@
 git clone https://github.com/KKP240/Q-Hospital.git
 cd Q-Hospital
 ```
+### ขั้นตอนที่ 2: ติดตั้ง dependecies
 
-### ขั้นตอนที่ 2: รัน Services
+วิธีแรก:
+
+``` bash
+go mod tidy
+```
+
+หรือรัน:
+
+``` bash
+go mod download
+```
+
+### ขั้นตอนที่ 3: รัน Services
 
 รันทั้งหมดพร้อมกัน:
 
