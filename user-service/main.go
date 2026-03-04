@@ -2,14 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
+	"github.com/KKP240/Q-Hospital/auth"
+	"github.com/KKP240/Q-Hospital/auth/middleware"
+
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
@@ -44,16 +44,14 @@ type Doctor struct {
 
 var db *gorm.DB
 var rabbitChannel *amqp.Channel
-var jwtSecret []byte
 
 func main() {
 	godotenv.Load()
 
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
 		log.Fatal("JWT_SECRET not set")
 	}
-	jwtSecret = []byte(secret)
 
 	var err error
 	db, err = gorm.Open(postgres.Open(os.Getenv("DB_URL")), &gorm.Config{})
@@ -71,29 +69,24 @@ func main() {
 	rabbitChannel, _ = conn.Channel()
 	rabbitChannel.ExchangeDeclare("hospital", "topic", true, false, false, false, nil)
 
+	authConfig := auth.NewAuthConfig(jwtSecret)
+
 	r := gin.Default()
 
 	r.POST("/register", register)
-	r.POST("/login", login)
+	r.POST("/login", login(authConfig)) // ส่ง config เข้าไป
 	r.GET("/users", getAllUsers)
 	r.GET("/users/:id", getUserByID)
+
+	// ใช้ shared middleware
 	authorized := r.Group("/")
-	authorized.Use(AuthMiddleware())
+	authorized.Use(middleware.GinAuthMiddleware(authConfig))
 	{
 		authorized.GET("/me", getCurrentUser)
 	}
 
 	log.Println("User Service running on :8080")
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	r.Run(":" + port)
-
-	log.Println("JWT_SECRET =", os.Getenv("JWT_SECRET"))
-	log.Println("DB_URL =", os.Getenv("DB_URL"))
-	log.Println("RABBITMQ_URL =", os.Getenv("RABBITMQ_URL"))
-	log.Println("PORT =", os.Getenv("PORT"))
+	r.Run(":8080")
 }
 
 //////////////////// REGISTER //////////////////////
@@ -201,97 +194,36 @@ type LoginInput struct {
 	Password string `json:"password" binding:"required"`
 }
 
-func login(c *gin.Context) {
-
-	var input LoginInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
-		return
-	}
-
-	var user User
-	if err := db.Where("email = ?", input.Email).First(&user).Error; err != nil {
-		c.JSON(401, gin.H{"error": "Invalid email or password"})
-		return
-	}
-
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
-	if err != nil {
-		c.JSON(401, gin.H{"error": "Invalid email or password"})
-		return
-	}
-
-	token, err := generateToken(user)
-	if err != nil {
-		c.JSON(500, gin.H{"error": "Token generation failed"})
-		return
-	}
-
-	c.JSON(200, gin.H{
-		"message": "Login successful",
-		"token":   token,
-	})
-}
-
-//////////////////// TOKEN //////////////////////
-
-func generateToken(user User) (string, error) {
-
-	claims := jwt.MapClaims{
-		"user_id": user.ID,
-		"role":    user.Role,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	return token.SignedString(jwtSecret)
-}
-
-//////////////////// AUTH MIDDLEWARE //////////////////////
-
-func AuthMiddleware() gin.HandlerFunc {
+func login(authConfig *auth.AuthConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(401, gin.H{"error": "Authorization header required"})
-			c.Abort()
+		var input LoginInput
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
 
-		tokenString := strings.SplitN(authHeader, " ", 2)
-
-		if len(tokenString) != 2 || tokenString[0] != "Bearer" {
-			c.JSON(401, gin.H{"error": "Invalid authorization format"})
-			c.Abort()
+		var user User
+		if err := db.Where("email = ?", input.Email).First(&user).Error; err != nil {
+			c.JSON(401, gin.H{"error": "Invalid email or password"})
 			return
 		}
 
-		token, err := jwt.Parse(tokenString[1], func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method")
-			}
-			return jwtSecret, nil
+		err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
+		if err != nil {
+			c.JSON(401, gin.H{"error": "Invalid email or password"})
+			return
+		}
+
+		token, err := authConfig.GenerateToken(user.ID, user.Role, time.Hour*24)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Token generation failed"})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"message": "Login successful",
+			"token":   token,
 		})
-
-		if err != nil || !token.Valid {
-			c.JSON(401, gin.H{"error": "Invalid token"})
-			c.Abort()
-			return
-		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok || !token.Valid {
-			c.JSON(401, gin.H{"error": "Invalid token claims"})
-			c.Abort()
-			return
-		}
-
-		c.Set("user_id", claims["user_id"])
-		c.Set("role", claims["role"])
-
-		c.Next()
 	}
 }
 

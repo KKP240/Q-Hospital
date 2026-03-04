@@ -73,7 +73,9 @@ services:
         condition: service_healthy
 
   user-service:
-    build: ./user-service
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
     container_name: user_service
     ports:
       - "8084:8080"
