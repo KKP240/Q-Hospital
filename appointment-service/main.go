@@ -36,24 +36,24 @@ func main() {
 
 	// ============ DB ============
 	db, err = gorm.Open(postgres.Open(os.Getenv("DB_URL")), &gorm.Config{})
-	failOnError(err, "Failed to connect to Database.")
+	failOnError(err, "Failed to connect to Database")
 
 	err = db.AutoMigrate(&Appointment{})
-	failOnError(err, "Migration failed.")
+	failOnError(err, "Migration failed")
 
 	// ============ RabbitMQ ============
 	conn, err := amqp.Dial(os.Getenv("RABBITMQ_URL"))
-	failOnError(err, "Failed to connect to RabbitMQ.")
+	failOnError(err, "Failed to connect to RabbitMQ")
 
 	defer conn.Close()
 
 	rabbitCh, err = conn.Channel()
-	failOnError(err, "RabbitMQ channel failed.")
+	failOnError(err, "RabbitMQ channel failed")
 
 	defer rabbitCh.Close()
 
 	err = rabbitCh.ExchangeDeclare("hospital", "topic", true, false, false, false, nil)
-	failOnError(err, "Exchange declare failed.")
+	failOnError(err, "Exchange declare failed")
 
 	// ============ Router ============
 	r := gin.Default()
@@ -117,6 +117,11 @@ func confirm(c *gin.Context) {
 		return
 	}
 
+	if a.Status == "cancelled" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "already cancelled"})
+		return
+	}
+
 	a.Status = "confirmed"
 
 	if err := db.Save(&a).Error; err != nil {
@@ -136,11 +141,23 @@ func confirm(c *gin.Context) {
 }
 
 func cancel(c *gin.Context) {
+	var a Appointment
+
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := db.First(&a, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "appointment not found"})
+		return
+	}
+
+	if a.Status == "confirmed" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "already confirmed"})
 		return
 	}
 
