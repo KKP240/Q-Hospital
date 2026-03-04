@@ -241,17 +241,43 @@ curl -X PUT http://localhost:8083/prescriptions/1/dispense
 
 ### โครงสร้างโฟลเดอร์
 
-    hospital-3services/
-    ├── docker-compose.yml
-    ├── appointment-service/
-    │   ├── main.go
-    │   └── Dockerfile
-    ├── queue-patient-service/
-    │   ├── main.go
-    │   └── Dockerfile
-    └── payment-pill-service/
-        ├── main.go
-        └── Dockerfile
+QUEUE-HOSPITAL/
+│
+├── appointment-service/
+│   ├── go.mod
+│   ├── go.sum
+│   └── main.go
+│
+├── auth/
+│   ├── middleware/
+│   │   └── gin.go
+│   ├── auth.go
+│   ├── go.mod
+│   └── go.sum
+│
+├── init-db/
+│   └── init.sql
+│
+├── payment-pill-service/
+│   ├── Dockerfile
+│   ├── go.mod
+│   ├── go.sum
+│   └── main.go
+│
+├── queue-patient-service/
+│   ├── Dockerfile
+│   ├── go.mod
+│   ├── go.sum
+│   └── main.go
+│
+├── user-service/
+│   ├── Dockerfile
+│   ├── go.mod
+│   ├── go.sum
+│   └── main.go
+│
+└── docker-compose.yml
+└── Readme.md
 
 ### Rebuild
 
