@@ -71,3 +71,18 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+
+  user-service:
+    build: ./user-service
+    container_name: user_service
+    ports:
+      - "8084:8080"
+    environment:
+      - DB_URL=postgres://admin:admin@postgres:5432/user_db?sslmode=disable
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
+      - JWT_SECRET=my_super_secret_key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
