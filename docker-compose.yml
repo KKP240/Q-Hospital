@@ -31,7 +31,9 @@ services:
       retries: 5
 
   appointment-service:
-    build: ./appointment-service
+    build:
+      context: .
+      dockerfile: appointment-service/Dockerfile
     container_name: appointment_service
     ports:
       - "8081:8080"
@@ -39,6 +41,7 @@ services:
       - DB_URL=postgres://admin:admin@postgres:5432/appointment_db?sslmode=disable
       - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
       - USER_SERVICE_URL=http://user-service:8080
+      - JWT_SECRET=my_super_secret_key
     depends_on:
       postgres:
         condition: service_healthy

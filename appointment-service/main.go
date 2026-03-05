@@ -4,6 +4,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/KKP240/Q-Hospital/auth"
+	"github.com/KKP240/Q-Hospital/auth/middleware"
 	"github.com/gin-gonic/gin"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"gorm.io/driver/postgres"
@@ -27,6 +29,11 @@ func main() {
 		userServiceURL = "http://localhost:8084"
 	}
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET not set")
+	}
+
 	// Database
 	db, err = gorm.Open(postgres.Open(os.Getenv("DB_URL")), &gorm.Config{})
 	failOnError(err, "Failed to connect to Database")
@@ -48,10 +55,18 @@ func main() {
 
 	// Router
 	r := gin.Default()
-	r.POST("/appointments", create)
-	r.GET("/appointments", list)
-	r.PUT("/appointments/:id/confirm", confirm)
-	r.PUT("/appointments/:id/cancel", cancel)
+
+	// middleware
+	authConfig := auth.NewAuthConfig(jwtSecret)
+
+	authorized := r.Group("/")
+	authorized.Use(middleware.GinAuthMiddleware(authConfig))
+	{
+		authorized.GET("/appointments", list)
+		authorized.POST("/appointments", create)
+		authorized.PUT("/appointments/:id/confirm", confirm)
+		authorized.PUT("/appointments/:id/cancel", cancel)
+	}
 
 	log.Println("Appointment Service running on :8080")
 	r.Run(":8080")
