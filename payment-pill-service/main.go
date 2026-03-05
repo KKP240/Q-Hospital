@@ -6,6 +6,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/KKP240/Q-Hospital/auth"
+	"github.com/KKP240/Q-Hospital/auth/middleware"
+
 	"github.com/gin-gonic/gin"
 	"github.com/streadway/amqp"
 	"gorm.io/driver/postgres"
@@ -36,6 +39,12 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	db.AutoMigrate(&Payment{}, &Prescription{})
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET not set")
+	}
+	authConfig := auth.NewAuthConfig(jwtSecret)
 
 	conn, err := amqp.Dial(os.Getenv("RABBITMQ_URL"))
 	if err != nil {
@@ -89,16 +98,43 @@ func main() {
 
 	r := gin.Default()
 
-	// Payment APIs
-	r.GET("/payments/:queue_id", getPayment)
-	r.PUT("/payments/:id/pay", pay)
+	authorized := r.Group("/")
+	authorized.Use(middleware.GinAuthMiddleware(authConfig))
+	{
+		authorized.GET("/me", getCurrentUser)
 
-	// Prescription APIs
-	r.GET("/prescriptions/:queue_id", getPrescription)
-	r.PUT("/prescriptions/:id/dispense", dispense)
+		pharmacist := authorized.Group("/")
+		pharmacist.Use(middleware.RequireRole("pharmacist", "admin", "doctor"))
+		{
+			pharmacist.PUT("/prescriptions/:id/dispense", dispense)
+		}
+
+		cashier := authorized.Group("/")
+		cashier.Use(middleware.RequireRole("cashier", "admin", "doctor"))
+		{
+			cashier.PUT("/payments/:id/pay", pay)
+		}
+
+		authorized.GET("/payments/:queue_id", getPayment)
+		authorized.GET("/prescriptions/:queue_id", getPrescription)
+	}
 
 	log.Println("Payment-Pill Service :8080")
 	r.Run(":8080")
+}
+
+func getCurrentUser(c *gin.Context) {
+	userID, role, exists := middleware.GetCurrentUser(c)
+	if !exists {
+		c.JSON(401, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"user_id": userID,
+		"role":    role,
+		"service": "payment-pill",
+	})
 }
 
 func getPayment(c *gin.Context) {
