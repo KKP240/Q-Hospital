@@ -77,6 +77,8 @@ func main() {
 	r.POST("/login", login(authConfig)) // ส่ง config เข้าไป
 	r.GET("/users", getAllUsers)
 	r.GET("/users/:id", getUserByID)
+	r.GET("/patients/:id", getPatientByID)
+	r.GET("/doctors/:id", getDoctorByID)
 
 	// ใช้ shared middleware
 	authorized := r.Group("/")
@@ -331,6 +333,44 @@ func getUserByID(c *gin.Context) {
 			"address":      doctor.Address,
 			"phone_number": doctor.PhoneNumber,
 		}
+	}
+
+	c.JSON(200, response)
+}
+
+func getPatientByID(c *gin.Context) {
+	id := c.Param("id")
+
+	var patient Patient
+	if err := db.First(&patient, "user_id = ?", id).Error; err != nil {
+		c.JSON(404, gin.H{"error": "Patient not found"})
+		return
+	}
+
+	response := gin.H{
+		"user_id":      patient.UserID,
+		"address":      patient.Address,
+		"phone_number": patient.PhoneNumber,
+		"user":         patient.User,
+	}
+
+	c.JSON(200, response)
+}
+
+func getDoctorByID(c *gin.Context) {
+	id := c.Param("id")
+
+	var doctor Doctor
+	if err := db.First(&doctor, "user_id = ?", id).Error; err != nil {
+		c.JSON(404, gin.H{"error": "Doctor not found"})
+		return
+	}
+
+	response := gin.H{
+		"user_id":      doctor.UserID,
+		"address":      doctor.Address,
+		"phone_number": doctor.PhoneNumber,
+		"user":         doctor.User,
 	}
 
 	c.JSON(200, response)
