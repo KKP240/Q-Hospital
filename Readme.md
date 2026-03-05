@@ -99,81 +99,126 @@ docker-compose up -d --build
 
 ------------------------------------------------------------------------
 
-## 🧪 ทดสอบด้วย cURL
+# 🏥 Clinic API Testing Guide (Postman)
 
-### 1️⃣ สร้างนัดหมาย
+คู่มือสำหรับการทดสอบระบบ API ของคลินิกผ่าน Postman โดยแบ่งตาม Service ต่างๆ และมีการจัดการสิทธิ์ผู้ใช้งาน (Role-based Access Control)
 
-``` bash
-curl -X POST http://localhost:8081/appointments -H "Content-Type: application/json" -d '{ "patient": "สมชาย ใจดี", "doctor": "นพ.สมหญิง รักษาดี", "date": "2025-03-15" }'
-```
+---
 
-Response:
+## 🔑 การตั้งค่า Token (Authentication)
+ระบบนี้ใช้ **JWT Token** ในการยืนยันตัวตน หลังจากทำการ Login สำเร็จ ให้นำ Token ที่ได้ไปตั้งค่าใน Postman ดังนี้:
+1. ไปที่แท็บ **Headers** ของ Request
+2. เพิ่ม Key: `Authorization`
+3. เพิ่ม Value: `Bearer <ใส่_Token_ที่นี่>`
+*(หรือใช้แท็บ **Authorization** -> เลือก Type เป็น **Bearer Token**)*
 
-``` json
+---
+
+## 👤 1. Authentication Service (Port `8084`)
+
+### 1.1 ลงทะเบียนผู้ใช้งาน (Register)
+* **Method:** `POST`
+* **URL:** `http://localhost:8084/register`
+* **Body (JSON):**
+
+**สำหรับผู้ป่วย (Patient):**
+```json
 {
-  "id": 1,
-  "patient": "สมชาย ใจดี",
-  "doctor": "นพ.สมหญิง รักษาดี",
-  "date": "2025-03-15",
-  "status": "pending"
+    "name": "patient1",
+    "email": "patient1@gmail.com",
+    "password": "1234",
+    "role": "patient",
+    "address": "abcs",
+    "phone_number": "0649515415"
+}
+```
+**สำหรับแพทย์ (Doctor):**
+```json
+{
+    "name": "doctor1",
+    "email": "doctor1@gmail.com",
+    "password": "1234",
+    "role": "doctor",
+    "address": "abcs",
+    "phone_number": "0323243423"
 }
 ```
 
-------------------------------------------------------------------------
+### 1.2 เข้าสู่ระบบ (Login)
+* **Method:** `POST`
+* **URL:** `http://localhost:8084/login`
+* **Body (JSON):**
 
-### 2️⃣ ยืนยันนัดหมาย (สร้างคิวอัตโนมัติ)
+```json
+{
+    "email": "patient1@gmail.com",
+    "password": "1234"
+}
+```
+(ใช้ email/password ของบัญชีที่ต้องการ Login เพื่อรับ Token นำไปใช้ในขั้นตอนต่อไป)
 
-``` bash
-curl -X PUT http://localhost:8081/appointments/1/confirm
+## 📅 2. Appointment Service (Port 8081)
+
+### 2.1 สร้างนัดหมาย (Create Appointment)
+* **Method:** `POST`
+* **URL:** `http://localhost:8081/appointments`
+* **Access:** ⚠️ เฉพาะ Doctor เท่านั้น (ต้องใส่ Token ของ Doctor)
+* **Body (JSON):**
+
+```json
+{
+    "patient_id": "04db5cf1-66df-4b85-993b-63db71ef8c98",
+    "doctor_id": "b07ce4d2-16cc-4fb4-94e3-fa00288c5c4e",
+    "date": "2025-03-15"
+}
 ```
 
-------------------------------------------------------------------------
+### 2.2 ดูนัดหมายทั้งหมด (Get Appointments)
+* **Method:** `GET`
+* **URL:** `http://localhost:8081/appointments`
+* **Access:** ✅ ดูได้ทั้ง Doctor และ Patient (ต้องแนบ Token)
 
-### 3️⃣ ตรวจสอบคิวที่สร้าง
+### 2.3 ยืนยันนัดหมาย (Confirm Appointment) - สร้างคิวอัตโนมัติ
+* **Method:** `PUT`
+* **URL:** `http://localhost:8081/appointments/:id/confirm` (แทนที่ :id ด้วย ID ของนัดหมาย)
+* **Access:** ⚠️ เฉพาะ Patient เท่านั้น (Doctor ไม่สามารถแก้ไขได้)
 
-``` bash
-curl http://localhost:8082/queues
-```
+### 2.4 ยกเลิกนัดหมาย (Cancel Appointment)
+* **Method:** `PUT`
+* **URL:** `http://localhost:8081/appointments/:id/cancel` (แทนที่ :id ด้วย ID ของนัดหมาย)
+* **Access:** ⚠️ เฉพาะ Patient เท่านั้น (Doctor ไม่สามารถแก้ไขได้)
 
-------------------------------------------------------------------------
+## 🚶‍♂️ 3. Queue Service (Port 8082)
 
-### 4️⃣ เรียกผู้ป่วยเข้าห้องตรวจ
+### 3.1 ตรวจสอบคิวที่สร้าง
+* **Method:** `GET`
+* **URL:** `http://localhost:8082/queues`
 
-``` bash
-curl -X PUT http://localhost:8082/queues/1/call
-```
+### 3.2 เรียกผู้ป่วยเข้าห้องตรวจ
+* **Method:** `PUT`
+* **URL:** `http://localhost:8082/queues/1/call`
 
-------------------------------------------------------------------------
+### 3.3 ตรวจเสร็จสิ้น (สร้างใบเสร็จอัตโนมัติ)
+* **Method:** `PUT`
+* **URL:** `http://localhost:8082/queues/1/done`
 
-### 5️⃣ ตรวจเสร็จ (สร้างใบเสร็จอัตโนมัติ)
+## 💊 4. Payment & Prescription Service (Port 8083)
 
-``` bash
-curl -X PUT http://localhost:8082/queues/1/done
-```
+### 4.1 ตรวจสอบใบเสร็จรับเงิน
+* **Method:** `GET`
+* **URL:** `http://localhost:8083/payments/1`
 
-------------------------------------------------------------------------
+### 4.2 ชำระเงิน (สร้างใบสั่งยาอัตโนมัติ)
+* **Method:** `PUT`
+* **URL:** `http://localhost:8083/payments/1/pay`
 
-### 6️⃣ ตรวจสอบใบเสร็จ
+### 4.2 ชำระเงิน (สร้างใบสั่งยาอัตโนมัติ)
+* **Method:** `PUT`
+* **URL:** `http://localhost:8083/payments/1/pay`
 
-``` bash
-curl http://localhost:8083/payments/1
-```
-
-------------------------------------------------------------------------
-
-### 7️⃣ ชำระเงิน (สร้างใบสั่งยาอัตโนมัติ)
-
-``` bash
-curl -X PUT http://localhost:8083/payments/1/pay
-```
-
-------------------------------------------------------------------------
-
-### 8️⃣ จ่ายยาเสร็จสิ้น
-
-``` bash
-curl -X PUT http://localhost:8083/prescriptions/1/dispense
-```
+### 4.3 จ่ายยาเสร็จสิ้น
+* **Method:** `PUT`
+* **URL:** `http://localhost:8083/prescriptions/1/dispense`
 
 ------------------------------------------------------------------------
 
