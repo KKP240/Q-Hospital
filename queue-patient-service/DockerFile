@@ -1,14 +1,23 @@
+# ใช้เวอร์ชัน 1.23 หรือ 1.24 เพราะ 1.25 ยังไม่มีเป็นทางการครับ
 FROM golang:1.25-alpine
 
 WORKDIR /app
-
-# เพิ่ม build-base เผื่อ gorm/postgres ต้องการใช้
 RUN apk add --no-cache build-base
 
-COPY go.mod go.sum ./
+# 1. ก๊อปปี้โฟลเดอร์ auth มาไว้ที่ /auth (อยู่นอกโฟลเดอร์แอป)
+COPY auth/ /auth/
+
+# 2. ก๊อปปี้ไฟล์ go.mod และ go.sum จากโฟลเดอร์ queue-patient-service
+COPY queue-patient-service/go.mod queue-patient-service/go.sum ./
+
+# 3. แก้ไข replace path ใน go.mod ให้ชี้ไปที่ /auth ใน container
+RUN go mod edit -replace github.com/KKP240/Q-Hospital/auth=/auth
 RUN go mod download
 
-COPY . .
+# 4. ก๊อปปี้ไฟล์ทั้งหมดจาก queue-patient-service มาที่ /app
+COPY queue-patient-service/ .
+
+# 5. Build (ตอนนี้ไฟล์ .go จะอยู่ที่ /app ทั้งหมดแล้ว)
 RUN go build -o main .
 
 CMD ["./main"]

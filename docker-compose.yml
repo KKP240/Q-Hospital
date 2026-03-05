@@ -49,7 +49,9 @@ services:
         condition: service_healthy
 
   queue-patient-service:
-    build: ./queue-patient-service
+    build:
+      context: .
+      dockerfile: queue-patient-service/Dockerfile
     container_name: queue_service
     ports:
       - "8082:8080"
