@@ -8,23 +8,9 @@ type Appointment struct {
 	Status    string `json:"status" gorm:"default:'pending'"`
 }
 
-type User struct {
+type UserResponse struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
 	Role  string `json:"role"`
-}
-
-type Patient struct {
-	UserID      string `json:"user_id"`
-	Address     string `json:"address"`
-	PhoneNumber string `json:"phone_number"`
-	User        User   `json:"user"`
-}
-
-type Doctor struct {
-	UserID      string `json:"user_id"`
-	Address     string `json:"address"`
-	PhoneNumber string `json:"phone_number"`
-	User        User   `json:"user"`
 }

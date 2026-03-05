@@ -18,14 +18,14 @@ func create(c *gin.Context) {
 	}
 
 	// Verify patient or doctor
-	patient, err := GetPatient(a.PatientID)
-	if err != nil || patient == nil {
+	patient, err := GetUser(a.PatientID)
+	if err != nil || patient == nil || patient.Role != "patient" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Patient not found or service unavailable"})
 		return
 	}
 
-	doctor, err := GetDoctor(a.DoctorID)
-	if err != nil || doctor == nil {
+	doctor, err := GetUser(a.DoctorID)
+	if err != nil || doctor == nil || doctor.Role != "doctor" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Doctor not found or service unavailable"})
 		return
 	}
