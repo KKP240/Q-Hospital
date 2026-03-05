@@ -58,7 +58,7 @@ func main() {
 		}
 
 		cashier := authorized.Group("/")
-		cashier.Use(middleware.RequireRole("cashier", "admin", "doctor"))
+		cashier.Use(middleware.RequireRole("cashier", "admin", "patient"))
 		{
 			cashier.PUT("/payments/:id/pay", pay)
 		}
