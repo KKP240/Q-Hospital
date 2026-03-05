@@ -38,6 +38,7 @@ services:
     environment:
       - DB_URL=postgres://admin:admin@postgres:5432/appointment_db?sslmode=disable
       - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
+      - USER_SERVICE_URL=http://user-service:8080
     depends_on:
       postgres:
         condition: service_healthy
