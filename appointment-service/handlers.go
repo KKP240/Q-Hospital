@@ -17,6 +17,14 @@ func create(c *gin.Context) {
 		return
 	}
 
+	// Check user role
+	userRole := c.GetString("role")
+
+	if userRole != "doctor" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: Only doctors can create appointments"})
+		return
+	}
+
 	// Verify patient or doctor
 	patient, err := GetUser(a.PatientID)
 	if err != nil || patient == nil || patient.Role != "patient" {
@@ -62,6 +70,14 @@ func confirm(c *gin.Context) {
 		return
 	}
 
+	// Check user role
+	userRole := c.GetString("role")
+
+	if userRole != "patient" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: Only patients can modify appointments"})
+		return
+	}
+
 	if err := db.First(&a, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "appointment not found"})
 		return
@@ -104,6 +120,14 @@ func cancel(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	// Check user role
+	userRole := c.GetString("role")
+
+	if userRole != "patient" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: Only patients can modify appointments"})
 		return
 	}
 
