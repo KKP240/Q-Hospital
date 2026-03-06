@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -9,7 +10,7 @@ import (
 var rabbitCh *amqp.Channel
 
 // RabbitMQ Publisher
-func publishEvent(routingKey string, a Appointment) error {
+func publishEvent(ctx context.Context, routingKey string, a Appointment) error {
 	event, err := json.Marshal(map[string]interface{}{
 		"appointment_id": a.ID,
 		"patient_id":     a.PatientID,
@@ -20,7 +21,8 @@ func publishEvent(routingKey string, a Appointment) error {
 		return err
 	}
 
-	return rabbitCh.Publish(
+	return rabbitCh.PublishWithContext(
+		ctx,
 		"hospital",
 		routingKey,
 		false,

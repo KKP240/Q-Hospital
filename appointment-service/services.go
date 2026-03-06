@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -18,14 +19,15 @@ var userServiceURL string
 var userBreaker = circuitbreaker.NewBreaker("user-service")
 
 // Retry HTTP request 3 ครั้ง
-func httpGetWithRetry(url string) (*http.Response, error) {
+func httpGetWithRetry(ctx context.Context, url string) (*http.Response, error) {
 
 	var resp *http.Response
 	var err error
 
 	for i := 0; i < 3; i++ {
 
-		resp, err = httpClient.Get(url)
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		resp, err = httpClient.Do(req)
 
 		if err == nil {
 			return resp, nil
@@ -38,13 +40,13 @@ func httpGetWithRetry(url string) (*http.Response, error) {
 	return nil, err
 }
 
-func GetUser(id string) (*UserResponse, error) {
+func GetUser(ctx context.Context, id string) (*UserResponse, error) {
 
 	url := userServiceURL + "/users/" + id
 
 	result, err := userBreaker.Execute(func() (interface{}, error) {
 
-		resp, err := httpGetWithRetry(url)
+		resp, err := httpGetWithRetry(ctx, url)
 		if err != nil {
 			return nil, err
 		}
