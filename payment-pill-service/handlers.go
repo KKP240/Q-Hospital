@@ -102,6 +102,10 @@ func pay(c *gin.Context) {
 			return err
 		}
 
+		if payment.PatientID != currentUserID {
+			return errors.New("FORBIDDEN_NOT_OWNER")
+		}
+
 		if payment.Status == "paid" {
 			return errors.New("ALREADY_PAID")
 		}
@@ -110,7 +114,7 @@ func pay(c *gin.Context) {
 			return err
 		}
 
-		pres := Prescription{QueueID: payment.QueueID, PatientID: currentUserID, Medicine: "Paracetamol, Vit-C"}
+		pres := Prescription{QueueID: payment.QueueID, PatientID: payment.PatientID, Medicine: "Paracetamol, Vit-C"}
 
 		if err := ts.Create(&pres).Error; err != nil {
 			return err
@@ -122,6 +126,10 @@ func pay(c *gin.Context) {
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(404, gin.H{"error": "payment record not found"})
+			return
+		}
+		if err.Error() == "FORBIDDEN_NOT_OWNER" {
+			c.JSON(403, gin.H{"error": "Forbidden: you can only pay your own payments"})
 			return
 		}
 		if err.Error() == "ALREADY_PAID" {
