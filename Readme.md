@@ -224,6 +224,17 @@ docker-compose up -d --build
 
 ## 📚 API Documentation
 
+### 🔹 User Service (:8084)
+
+Method | Endpoint | Description
+--------|----------------|--------------------------
+POST | /register | สมัครสมาชิกผู้ใช้ใหม่
+POST | /login | เข้าสู่ระบบและรับ Token
+GET | /users | ดูรายการผู้ใช้ทั้งหมด
+GET | /users/:id | ดูข้อมูลผู้ใช้ตาม ID
+GET | /patients/:id | ดูข้อมูลผู้ป่วยตาม ID
+GET | /doctors/:id | ดูข้อมูลแพทย์ตาม ID
+
 ### 🔹 Appointment Service (:8081)
 
   Method |  Endpoint            |        Description
