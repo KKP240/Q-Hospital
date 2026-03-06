@@ -49,7 +49,7 @@ func main() {
 	authorized := r.Group("/")
 	authorized.Use(middleware.GinAuthMiddleware(authConfig))
 	{
-		authorized.GET("/me", getCurrentUser)
+		authorized.GET("/my", getCurrentUser)
 
 		doctor := authorized.Group("/")
 		doctor.Use(middleware.RequireRole("doctor"))
@@ -62,8 +62,8 @@ func main() {
 		patient := authorized.Group("/")
 		patient.Use(middleware.RequireRole("patient"))
 		{
-			patient.GET("/me/payments", getMyPayments)
-			patient.GET("/me/prescriptions", getMyPrescriptions)
+			patient.GET("/my/payments", getMyPayments)
+			patient.GET("/my/prescriptions", getMyPrescriptions)
 			patient.PUT("/payments/:id/pay", pay)
 		}
 
