@@ -202,23 +202,52 @@ docker-compose up -d --build
 * **Method:** `PUT`
 * **URL:** `http://localhost:8082/queues/1/done`
 
-## 💊 4. Payment & Prescription Service (Port 8083)
+## 💊 4. Payment & Pill Service (Port 8083)
 
-### 4.1 ตรวจสอบใบเสร็จรับเงิน
+### 4.1 ตรวจสอบข้อมูลผู้ใช้ปัจจุบัน
 * **Method:** `GET`
-* **URL:** `http://localhost:8083/payments/1`
+* **URL:** `http://localhost:8083/my`
+* **Auth:** `Doctor, Patient`
 
-### 4.2 ชำระเงิน (สร้างใบสั่งยาอัตโนมัติ)
-* **Method:** `PUT`
-* **URL:** `http://localhost:8083/payments/1/pay`
+### 4.2 ดู Payments ทั้งหมด (เฉพาะ Doctor)
+* **Method:** `GET`
+* **URL:** `http://localhost:8083/payments`
+* **Auth:** `Doctor only`
 
-### 4.2 ชำระเงิน (สร้างใบสั่งยาอัตโนมัติ)
-* **Method:** `PUT`
-* **URL:** `http://localhost:8083/payments/1/pay`
+### 4.3 ดู Prescriptions ทั้งหมด (เฉพาะ Doctor)
+* **Method:** `GET`
+* **URL:** `http://localhost:8083/prescriptions`
+* **Auth:** `Doctor only`
 
-### 4.3 จ่ายยาเสร็จสิ้น
+### 4.4 ดู Payments ของตัวเอง (เฉพาะ Patient)
+* **Method:** `GET`
+* **URL:** `http://localhost:8083/my/payments`
+* **Auth:** `Patient only`
+
+### 4.5 ดู Prescriptions ของตัวเอง (เฉพาะ Patient)
+* **Method:** `GET`
+* **URL:** `http://localhost:8083/my/prescriptions`
+* **Auth:** `Patient only`
+
+### 4.6 ดู Payment รายการเดียว (Doctor ดูได้ทุกอัน / Patient ดูได้แค่ของตัวเอง)
+* **Method:** `GET`
+* **URL:** `http://localhost:8083/payments/{queue_id}`
+* **Auth:** `Doctor, Patient`
+
+### 4.7 ดู Prescription รายการเดียว (Doctor ดูได้ทุกอัน / Patient ดูได้แค่ของตัวเอง)
+* **Method:** `GET`
+* **URL:** `http://localhost:8083/prescriptions/{queue_id}`
+* **Auth:** `Doctor, Patient`
+
+### 4.8 ชำระเงิน (สร้างใบสั่งยาอัตโนมัติ / จ่ายได้แค่ของตัวเอง)
 * **Method:** `PUT`
-* **URL:** `http://localhost:8083/prescriptions/1/dispense`
+* **URL:** `http://localhost:8083/payments/{id}/pay`
+* **Auth:** `Patient only`
+
+### 4.9 จ่ายยาเสร็จสิ้น (เฉพาะ Doctor)
+* **Method:** `PUT`
+* **URL:** `http://localhost:8083/prescriptions/{id}/dispense`
+* **Auth:** `Doctor only`
 
 ------------------------------------------------------------------------
 
@@ -258,12 +287,17 @@ GET | /doctors/:id | ดูข้อมูลแพทย์ตาม ID
 
 ### 🔹 Payment-Pill Service (:8083)
 
-  Method  | Endpoint                   |  Description
-  --------| -----------------------------| --------------------------
-  GET    |  /payments/:queue_id         |  ดูใบเสร็จของคิว
-  PUT    |  /payments/:id/pay            | ชำระเงิน → สร้างใบสั่งยา
-  GET    |  /prescriptions/:queue_id     | ดูใบสั่งยา
-  PUT    |  /prescriptions/:id/dispense  | จ่ายยาเสร็จสิ้น
+Method | Endpoint | Description
+-------|----------|------------
+GET | /me | ดูข้อมูลผู้ใช้ปัจจุบัน
+GET | /payments | ดู Payments ทั้งหมด (Doctor only)
+GET | /prescriptions | ดู Prescriptions ทั้งหมด (Doctor only)
+GET | /me/payments | ดู Payments ของตัวเอง (Patient only)
+GET | /me/prescriptions | ดู Prescriptions ของตัวเอง (Patient only)
+GET | /payments/:queue_id | ดู Payment รายการเดียว (Doctor ดูได้ทุกอัน / Patient ดูได้แค่ของตัวเอง)
+GET | /prescriptions/:queue_id | ดู Prescription รายการเดียว (Doctor ดูได้ทุกอัน / Patient ดูได้แค่ของตัวเอง)
+PUT | /payments/:id/pay | ชำระเงิน → สร้างใบสั่งยาอัตโนมัติ (Patient only)
+PUT | /prescriptions/:id/dispense | จ่ายยาเสร็จสิ้น (Doctor only)
 
 ------------------------------------------------------------------------
 
