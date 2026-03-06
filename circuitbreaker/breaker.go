@@ -12,7 +12,7 @@ func NewBreaker(name string) *gobreaker.CircuitBreaker {
 	settings := gobreaker.Settings{
 		Name:        name,
 		MaxRequests: 3,
-		Interval:    10 * time.Second,
+		Interval:    time.Minute,
 		Timeout:     15 * time.Second,
 
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
