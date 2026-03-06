@@ -40,6 +40,12 @@ func initRabbitMQConsumer(ch *amqp.Channel, db *gorm.DB) {
 				continue
 			}
 
+			patientID, ok := event["patient_id"].(string)
+			if !ok {
+				log.Println("Invalid patient_id in message")
+				continue
+			}
+
 			var count int64
 			db.Model(&Payment{}).Where("queue_id = ?", uint(queueID)).Count(&count)
 			if count > 0 {
@@ -47,8 +53,7 @@ func initRabbitMQConsumer(ch *amqp.Channel, db *gorm.DB) {
 				continue
 			}
 
-			// สร้างใบเสร็จ
-			payment := Payment{QueueID: uint(queueID), Amount: 500}
+			payment := Payment{QueueID: uint(queueID), PatientID: patientID, Amount: 500}
 			if err := db.Create(&payment).Error; err != nil {
 				log.Printf("Failed to create: %v", err)
 				msg.Nack(false, true)

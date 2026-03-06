@@ -22,21 +22,78 @@ func getCurrentUser(c *gin.Context) {
 	})
 }
 
-func getPayment(c *gin.Context) {
-	var payment Payment
-	if err := db.Where("queue_id = ?", c.Param("queue_id")).First(&payment).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(404, gin.H{"error": "Payment not found"})
-			return
-		}
+func getAllPayments(c *gin.Context) {
+	var payment []Payment
+
+	if err := db.Find(&payment).Error; err != nil {
 		c.JSON(500, gin.H{"error": "Database error"})
 		return
 	}
+
+	if len(payment) == 0 {
+		c.JSON(404, gin.H{"error": "No payments found"})
+		return
+	}
+
+	c.JSON(200, payment)
+}
+
+func getMyPayments(c *gin.Context) {
+	currentUserID, _, exists := middleware.GetCurrentUser(c)
+	if !exists {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var payment []Payment
+	if err := db.Where("patient_id = ?", currentUserID).Find(&payment).Error; err != nil {
+		c.JSON(500, gin.H{"error": "Database error"})
+		return
+	}
+
+	c.JSON(200, payment)
+}
+
+func getPayment(c *gin.Context) {
+	currentUserID, role, exists := middleware.GetCurrentUser(c)
+	if !exists {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var payment Payment
+
+	if role == "doctor" {
+		if err := db.Where("queue_id = ?", c.Param("queue_id")).First(&payment).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(404, gin.H{"error": "Payment not found"})
+				return
+			}
+			c.JSON(500, gin.H{"error": "Database error"})
+			return
+		}
+	} else {
+		if err := db.Where("queue_id = ? AND patient_id = ?", c.Param("queue_id"), currentUserID).First(&payment).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(404, gin.H{"error": "Payment not found"})
+				return
+			}
+			c.JSON(500, gin.H{"error": "Database error"})
+			return
+		}
+	}
+
 	c.JSON(200, payment)
 }
 
 func pay(c *gin.Context) {
 	id := c.Param("id")
+
+	currentUserID, _, exists := middleware.GetCurrentUser(c)
+	if !exists {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
 
 	err := db.Transaction(func(ts *gorm.DB) error {
 		var payment Payment
@@ -53,8 +110,7 @@ func pay(c *gin.Context) {
 			return err
 		}
 
-		// สร้างใบสั่งยา
-		pres := Prescription{QueueID: payment.QueueID, Medicine: "Paracetamol, Vit-C"}
+		pres := Prescription{QueueID: payment.QueueID, PatientID: currentUserID, Medicine: "Paracetamol, Vit-C"}
 
 		if err := ts.Create(&pres).Error; err != nil {
 			return err
@@ -79,16 +135,75 @@ func pay(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "paid success and prescription created"})
 }
 
-func getPrescription(c *gin.Context) {
-	var pres Prescription
-	if err := db.Where("queue_id = ?", c.Param("queue_id")).First(&pres).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(404, gin.H{"error": "Prescription not found"})
-			return
-		}
+func getAllPrescriptions(c *gin.Context) {
+	var pres []Prescription
+
+	if err := db.Find(&pres).Error; err != nil {
+		c.JSON(500, gin.H{
+			"error":   "Database error",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	if len(pres) == 0 {
+		c.JSON(404, gin.H{"error": "No prescriptions found"})
+		return
+	}
+
+	c.JSON(200, pres)
+}
+
+func getMyPrescriptions(c *gin.Context) {
+	currentUserID, role, exists := middleware.GetCurrentUser(c)
+	if !exists {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	if role != "patient" {
+		c.JSON(403, gin.H{"error": "Only patients can access this endpoint"})
+		return
+	}
+
+	var pres []Prescription
+	if err := db.Where("patient_id = ?", currentUserID).Find(&pres).Error; err != nil {
 		c.JSON(500, gin.H{"error": "Database error", "details": err.Error()})
 		return
 	}
+
+	c.JSON(200, pres)
+}
+
+func getPrescription(c *gin.Context) {
+	currentUserID, role, exists := middleware.GetCurrentUser(c)
+	if !exists {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var pres Prescription
+
+	if role == "doctor" {
+		if err := db.Where("queue_id = ?", c.Param("queue_id")).First(&pres).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(404, gin.H{"error": "Prescription not found"})
+				return
+			}
+			c.JSON(500, gin.H{"error": "Database error", "details": err.Error()})
+			return
+		}
+	} else {
+		if err := db.Where("queue_id = ? AND patient_id = ?", c.Param("queue_id"), currentUserID).First(&pres).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(404, gin.H{"error": "Prescription not found"})
+				return
+			}
+			c.JSON(500, gin.H{"error": "Database error", "details": err.Error()})
+			return
+		}
+	}
+
 	c.JSON(200, pres)
 }
 

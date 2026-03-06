@@ -51,16 +51,20 @@ func main() {
 	{
 		authorized.GET("/me", getCurrentUser)
 
-		pharmacist := authorized.Group("/")
-		pharmacist.Use(middleware.RequireRole("pharmacist", "admin", "doctor"))
+		doctor := authorized.Group("/")
+		doctor.Use(middleware.RequireRole("doctor"))
 		{
-			pharmacist.PUT("/prescriptions/:id/dispense", dispense)
+			doctor.GET("/payments", getAllPayments)
+			doctor.GET("/prescriptions/", getAllPrescriptions)
+			doctor.PUT("/prescriptions/:id/dispense", dispense)
 		}
 
-		cashier := authorized.Group("/")
-		cashier.Use(middleware.RequireRole("cashier", "admin", "patient"))
+		patient := authorized.Group("/")
+		patient.Use(middleware.RequireRole("patient"))
 		{
-			cashier.PUT("/payments/:id/pay", pay)
+			patient.GET("/me/payments", getMyPayments)
+			patient.GET("/me/prescriptions", getMyPrescriptions)
+			patient.PUT("/payments/:id/pay", pay)
 		}
 
 		authorized.GET("/payments/:queue_id", getPayment)
