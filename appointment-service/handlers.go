@@ -10,6 +10,8 @@ import (
 // Endpoints
 
 func create(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	var a Appointment
 
 	if err := c.ShouldBindJSON(&a); err != nil {
@@ -26,20 +28,20 @@ func create(c *gin.Context) {
 	}
 
 	// Verify patient or doctor
-	patient, err := GetUser(a.PatientID)
+	patient, err := GetUser(ctx, a.PatientID)
 	if err != nil || patient == nil || patient.Role != "patient" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Patient not found or service unavailable"})
 		return
 	}
 
-	doctor, err := GetUser(a.DoctorID)
+	doctor, err := GetUser(ctx, a.DoctorID)
 	if err != nil || doctor == nil || doctor.Role != "doctor" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Doctor not found or service unavailable"})
 		return
 	}
 
 	// Create Appointment
-	if err := db.Create(&a).Error; err != nil {
+	if err := db.WithContext(ctx).Create(&a).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create appointment"})
 		return
 	}
@@ -48,10 +50,11 @@ func create(c *gin.Context) {
 }
 
 func list(c *gin.Context) {
+	ctx := c.Request.Context()
 	var apps []Appointment
 
 	// List all appointment
-	if err := db.Find(&apps).Error; err != nil {
+	if err := db.WithContext(ctx).Find(&apps).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch appointments"})
 		return
 	}
@@ -60,6 +63,7 @@ func list(c *gin.Context) {
 }
 
 func confirm(c *gin.Context) {
+	ctx := c.Request.Context()
 	var a Appointment
 
 	idParam := c.Param("id")
@@ -78,7 +82,7 @@ func confirm(c *gin.Context) {
 		return
 	}
 
-	if err := db.First(&a, id).Error; err != nil {
+	if err := db.WithContext(ctx).First(&a, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "appointment not found"})
 		return
 	}
@@ -89,7 +93,7 @@ func confirm(c *gin.Context) {
 	}
 
 	// Database Transaction
-	tx := db.Begin()
+	tx := db.WithContext(ctx).Begin()
 	a.Status = "confirmed"
 
 	if err := tx.Save(&a).Error; err != nil {
@@ -98,7 +102,7 @@ func confirm(c *gin.Context) {
 		return
 	}
 
-	if err := publishEvent("appointment.confirmed", a); err != nil {
+	if err := publishEvent(ctx, "appointment.confirmed", a); err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to publish event, status reverted"})
 		return
@@ -113,6 +117,7 @@ func confirm(c *gin.Context) {
 }
 
 func cancel(c *gin.Context) {
+	ctx := c.Request.Context()
 	var a Appointment
 
 	idParam := c.Param("id")
@@ -131,7 +136,7 @@ func cancel(c *gin.Context) {
 		return
 	}
 
-	if err := db.First(&a, id).Error; err != nil {
+	if err := db.WithContext(ctx).First(&a, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "appointment not found"})
 		return
 	}
@@ -142,7 +147,7 @@ func cancel(c *gin.Context) {
 	}
 
 	a.Status = "cancelled"
-	if err := db.Save(&a).Error; err != nil {
+	if err := db.WithContext(ctx).Save(&a).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to cancel"})
 		return
 	}
