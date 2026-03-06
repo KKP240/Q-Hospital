@@ -6,12 +6,13 @@ RUN apk add --no-cache build-base
 
 # 1. ก๊อปปี้โฟลเดอร์ auth มาไว้ที่ /auth (อยู่นอกโฟลเดอร์แอป)
 COPY auth/ /auth/
-
+COPY circuitbreaker/ /circuitbreaker/
 # 2. ก๊อปปี้ไฟล์ go.mod และ go.sum จากโฟลเดอร์ queue-patient-service
 COPY queue-patient-service/go.mod queue-patient-service/go.sum ./
 
 # 3. แก้ไข replace path ใน go.mod ให้ชี้ไปที่ /auth ใน container
 RUN go mod edit -replace github.com/KKP240/Q-Hospital/auth=/auth
+RUN go mod edit -replace circuitbreaker=/circuitbreaker
 RUN go mod download
 
 # 4. ก๊อปปี้ไฟล์ทั้งหมดจาก queue-patient-service มาที่ /app

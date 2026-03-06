@@ -3,7 +3,16 @@ package main
 import (
 	"encoding/json"
 	"log"
+
+	"github.com/KKP240/Q-Hospital/circuitbreaker"
+	"github.com/sony/gobreaker"
 )
+
+var queueBreaker *gobreaker.CircuitBreaker
+
+func init() {
+	queueBreaker = circuitbreaker.NewBreaker("queue-db")
+}
 
 func startConsumer() {
 
@@ -24,7 +33,7 @@ func startConsumer() {
 		q.Name,
 		"appointment.confirmed",
 		"hospital",
-		false, 
+		false,
 		nil,
 	)
 
@@ -65,8 +74,22 @@ func startConsumer() {
 				Status:        StatusWaiting,
 			}
 
-			if err := db.Create(&queue).Error; err != nil {
-				log.Println("Failed create queue:", err)
+			// Circuit Breaker ครอบ DB
+			_, err := queueBreaker.Execute(func() (interface{}, error) {
+				if err := db.Create(&queue).Error; err != nil {
+					return nil, err
+				}
+				return true, nil
+			})
+
+			if err != nil {
+
+				log.Println("Queue creation failed:", err)
+
+				if err == gobreaker.ErrOpenState {
+					log.Println("Circuit breaker OPEN - skipping DB call")
+				}
+
 				msg.Nack(false, true)
 				continue
 			}

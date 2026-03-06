@@ -4,8 +4,10 @@ go 1.25.0
 
 require (
 	github.com/KKP240/Q-Hospital/auth v0.0.0
+	github.com/KKP240/Q-Hospital/circuitbreaker v0.0.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/rabbitmq/amqp091-go v1.10.0
+	github.com/sony/gobreaker v1.0.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
 )
@@ -51,3 +53,5 @@ require (
 )
 
 replace github.com/KKP240/Q-Hospital/auth => ../auth
+
+replace github.com/KKP240/Q-Hospital/circuitbreaker => ../circuitbreaker

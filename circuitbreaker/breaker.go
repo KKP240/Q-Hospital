@@ -14,9 +14,20 @@ func NewBreaker(name string) *gobreaker.CircuitBreaker {
 		MaxRequests: 3,
 		Interval:    10 * time.Second,
 		Timeout:     15 * time.Second,
+
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+
+			return counts.ConsecutiveFailures >= 3
+		},
+
 		OnStateChange: func(name string, from gobreaker.State, to gobreaker.State) {
-			fmt.Println("Circuit breaker state change:", from, "->", to)
-			fmt.Printf("Circuit breaker [%s] state change: %v -> %v\n", name, from, to)
+
+			fmt.Printf(
+				"Circuit breaker [%s] state change: %v -> %v\n",
+				name,
+				from,
+				to,
+			)
 		},
 	}
 
